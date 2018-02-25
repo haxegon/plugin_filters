@@ -31,9 +31,19 @@ class Filter {
 		bloomfilter.setfc2(1.0, 1.0, 1.0, 1.0);
 		
 		colortransformfilter = new Simplefilter();
+		
+		chromaticaberrationfilter = new CustomFilter(chromaticaberrationprogram);
+		chromaticaberrationfilter.setfc0(0, 1, 0, 0);
+		chromaticaberrationfilter.setfc1(0, 0, 0, 0);
+		
+		pixelsizefilter = new CustomFilter(pixelsizeprogram);
+		pixelsizefilter.setfc0(1 / Gfx.screenwidth, 1 / Gfx.screenheight, 1, 1);
 	}
 	
 	private static var colortransformfilter:Simplefilter;
+	private static var bloomfilter:CustomFilter;
+	private static var chromaticaberrationfilter:CustomFilter;
+	private static var pixelsizefilter:CustomFilter;
 	private static var _hueshift:Float;
 	private static var _saturationshift:Float;
 	private static var _lightnessshift:Float;
@@ -41,6 +51,11 @@ class Filter {
 	private static var _invert:Bool;
 	private static var _blur:Float;
 	private static var _bloom:Float;
+	private static var _tint:Int;
+	private static var _redshift:Float;
+	private static var _greenshift:Float;
+	private static var _blueshift:Float;
+	private static var _pixelsize:Float;
 	
 	/* Turn all filter effects off */
 	public static function reset() {
@@ -52,6 +67,11 @@ class Filter {
 		_saturationshift = 0;
 		_lightnessshift = 0;
 		_contrastshift = 0;
+		_redshift = 0;
+		_greenshift = 0;
+		_blueshift = 0;
+		_pixelsize = 1;
+		_tint = Col.TRANSPARENT;
 		
 		if (Gfx.screen != null){
 			if(Gfx.screen.filter != null){
@@ -59,6 +79,51 @@ class Filter {
 			}
 			Gfx.screen.filter = null;
 		}
+	}
+	
+	public static var tint(get, set):Int;
+	static function get_tint():Int { return _tint; }
+	static function set_tint(_t:Int):Int {
+		_tint = _t;
+		updatefilters();
+		
+	  return _tint;
+	}
+	
+	public static var pixelsize(get, set):Float;
+	static function get_pixelsize():Float { return _pixelsize; }
+	static function set_pixelsize(_p:Float):Float {
+		_pixelsize = _p;
+		updatefilters();
+		
+	  return _pixelsize;
+	}
+	
+	public static var redshift(get, set):Float;
+	static function get_redshift():Float { return _redshift; }
+	static function set_redshift(_r:Float):Float {
+		_redshift = _r;
+		updatefilters();
+		
+	  return _redshift;
+	}
+	
+	public static var greenshift(get, set):Float;
+	static function get_greenshift():Float { return _greenshift; }
+	static function set_greenshift(_g:Float):Float {
+		_greenshift = _g;
+		updatefilters();
+		
+	  return _greenshift;
+	}
+	
+	public static var blueshift(get, set):Float;
+	static function get_blueshift():Float { return _blueshift; }
+	static function set_blueshift(_b:Float):Float {
+		_blueshift = _b;
+		updatefilters();
+		
+	  return _blueshift;
 	}
 	
 	public static var hue(get, set):Float;
@@ -116,7 +181,6 @@ class Filter {
 	}
 	
 	public static var bloom(get, set):Float;
-	private static var bloomfilter:CustomFilter;
 	static function get_bloom():Float { return _bloom; }
 	static function set_bloom(_b:Float):Float {
 		_bloom = _b;
@@ -152,11 +216,24 @@ class Filter {
 			if (_saturationshift != 0) colortransformfilter.adjustSaturation(_saturationshift);
 			if (_lightnessshift != 0)	colortransformfilter.adjustBrightness(_lightnessshift);
 			if (_contrastshift != 0) colortransformfilter.adjustContrast(_contrastshift);
+			if (_tint != Col.TRANSPARENT) colortransformfilter.tint(_tint);
 			if (_invert) colortransformfilter.invert();
 			
 			if (_invert || _hueshift != 0 || _saturationshift != 0 || _lightnessshift != 0
-			  || _contrastshift != 0){
+			  || _contrastshift != 0 || _tint != Col.TRANSPARENT){
 				filterchain.push(colortransformfilter);
+			}
+			
+			//Chromatic Aberration
+			if (_redshift != 0 || _greenshift != 0 || _blueshift != 0){
+				chromaticaberrationfilter.setfc0( -_redshift, -_greenshift, -_blueshift, 0);
+				filterchain.push(chromaticaberrationfilter);
+			}
+			
+			//pixelsize effect
+			if (_pixelsize > 1){
+				pixelsizefilter.setfc0(_pixelsize / Gfx.screenwidth, _pixelsize / Gfx.screenheight, 1, 1);
+				filterchain.push(pixelsizefilter);
 			}
 			
 			if (filterchain.length == 0){
@@ -168,6 +245,39 @@ class Filter {
 	}
 	
 	private static var enabled:Bool = false;
+	
+	private static inline var pixelsizeprogram:String =
+		"div ft0, v0, fc0  \n" + 
+		"frc ft1, ft0  \n" + 
+		"sub ft0, ft0, ft1  \n" + 
+		"mul ft0, ft0, fc0  \n" + 
+		"tex oc, ft0, fs0<2d, clamp, linear>";
+	
+	private static inline var chromaticaberrationprogram:String =
+	  "tex ft0, v0, fs0<2d, clamp, linear, mipnone> \n"+
+		
+		//Red shift
+		"mov ft1, fc1 \n"+
+		"add ft1.x, v0.x, fc0.x \n" +
+		"mov ft1.y, v0.y \n"+	
+		"tex ft3, ft1.xy, fs0<2d, clamp, linear, mipnone> \n"+
+		"mov ft0.x, ft3.x \n" +
+		
+		//Green shift
+		"mov ft2, fc1 \n"+
+		"add ft2.x, v0.x, fc0.y \n" +
+		"mov ft2.y, v0.y \n"+	
+		"tex ft4, ft2.xy, fs0<2d, clamp, linear, mipnone> \n"+
+		"mov ft0.y, ft4.y \n" +
+		
+		//Blue shift
+		"mov ft5, fc1 \n"+
+		"add ft5.x, v0.x, fc0.z \n" +
+		"mov ft5.y, v0.y \n"+	
+		"tex ft6, ft5.xy, fs0<2d, clamp, linear, mipnone> \n"+
+		"mov ft0.z, ft6.z \n" +
+		
+		"mov oc, ft0";
 	
 	private static inline var bloomprogram:String = 
 	  "tex ft0, v0, fs0<2d, clamp, linear, mipnone>  \n" +
