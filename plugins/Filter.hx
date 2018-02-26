@@ -44,6 +44,13 @@ class Filter {
 		vcrfilter.setfc1(-.001, 0, 0, 0);  // Red offset
 		vcrfilter.setfc2(1, 3, 1, 1);      // For tracking effect
 		vcrfilter.setfc3(12.9898, 4.1414, 43758.5453, 1); // Random variables
+		
+		vignettefilter = new CustomFilter(vignetteprogram);
+		vignettefilter.setfc0(1, 1, 1, 1);
+		vignettefilter.setfc1(0.5, 0.5, 0.5, 0.5);
+		vignettefilter.setfc2(1.0, 0, 0, 0);
+		vignettefilter.setfc3(0, 1.0, 0, 0);
+		vignettefilter.setfc4(0, 0, 1.0, 0);
 	}
 	
 	private static var colortransformfilter:Simplefilter;
@@ -51,6 +58,7 @@ class Filter {
 	private static var chromaticaberrationfilter:CustomFilter;
 	private static var pixelsizefilter:CustomFilter;
 	private static var vcrfilter:CustomFilter;
+	private static var vignettefilter:CustomFilter;
 	private static var _hueshift:Float;
 	private static var _saturationshift:Float;
 	private static var _lightnessshift:Float;
@@ -64,6 +72,7 @@ class Filter {
 	private static var _blueshift:Float;
 	private static var _pixelsize:Float;
 	private static var _vcr:Bool;
+	private static var _vignette:Float;
 	
 	/* Turn all filter effects off */
 	public static function reset() {
@@ -81,6 +90,7 @@ class Filter {
 		_pixelsize = 1;
 		_tint = Col.TRANSPARENT;
 		_vcr = false;
+		_vignette = 0;
 		
 		if (Gfx.screen != null){
 			if(Gfx.screen.filter != null){
@@ -97,6 +107,15 @@ class Filter {
 		updatefilters();
 		
 	  return _tint;
+	}
+	
+	public static var vignette(get, set):Float;
+	static function get_vignette():Float { return _vignette; }
+	static function set_vignette(_v:Float):Float {
+		_vignette = _v;
+		updatefilters();
+		
+	  return _vignette;
 	}
 	
 	public static var pixelsize(get, set):Float;
@@ -260,6 +279,12 @@ class Filter {
 				filterchain.push(vcrfilter);
 			}
 			
+			if (_vignette > 0){
+				vignettefilter.setfc0(0.3, 0.3, 1, 1);
+				vignettefilter.setfc1(_vignette * 0.7, 1.0, 0.5, 0.4);
+				filterchain.push(vignettefilter);
+			}
+			
 			if (filterchain.length == 0){
 				Gfx.screen.filter = null;
 			}else{
@@ -269,6 +294,34 @@ class Filter {
 	}
 	
 	private static var enabled:Bool = false;
+	
+	private static inline var vignetteprogram:String =
+		"sub ft0.xy, v0.xy, fc0.xy \n" +
+		"mov ft2.x, fc1.w \n" +
+		"mul ft2.x, ft2.x, fc1.z \n" +
+		"sub ft3.xy, ft0.xy, ft2.x    \n" +
+		"mul ft4.x, ft3.x, ft3.x \n" +
+		"mul ft4.y, ft3.y, ft3.y \n" +
+		"add ft4.x, ft4.x, ft4.y \n" +
+		"sqt ft4.x, ft4.x \n" +
+		"dp3 ft4.y, ft2.xx, ft2.xx \n" +
+		"sqt ft4.y, ft4.y \n" +
+		"div ft5.x, ft4.x, ft4.y \n" +
+		"pow ft5.y, ft5.x, fc1.y \n" +
+		"mul ft5.z, fc1.x, ft5.y \n" +
+		"sat ft5.z, ft5.z \n" +
+		"min ft5.z, ft5.z, fc0.z \n" +
+		"sub ft6, fc0.z, ft5.z \n" +
+		"tex ft1, v0, fs0<2d, clamp, linear, mipnone> \n" +
+		
+		// sepia  
+		"dp3 ft2.x, ft1, fc2 \n" +
+		"dp3 ft2.y, ft1, fc3 \n" +
+		"dp3 ft2.z, ft1, fc4 \n" +
+		
+		"mul ft6.xyz, ft6.xyz, ft2.xyz \n" +
+		"mov ft6.w, ft1.w \n" +
+		"mov oc, ft6";
 	
 	private static inline var pixelsizeprogram:String =
 		"div ft0, v0, fc0  \n" + 
