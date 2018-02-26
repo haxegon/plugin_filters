@@ -28,7 +28,7 @@ class Filter {
 				
 				reset();
 				
-				Core.extend_endframe(updatefilters);
+				Core.extend_startframe(updatefilters);
 			}else{
 				trace("Warning: Filters are not available on this machine, so they have been disabed.");
 			}
@@ -96,6 +96,8 @@ class Filter {
 	private static var _vcr:Bool;
 	private static var _vignette:Float;
 	
+	private static var dirty:Bool;
+	
 	/* Turn all filter effects off */
 	public static function reset() {
 		if (!enabled) enable();
@@ -120,13 +122,15 @@ class Filter {
 			}
 			Gfx.screen.filter = null;
 		}
+		
+		dirty = true; updatefilters();
 	}
 	
 	public static var tint(get, set):Int;
 	static function get_tint():Int { return _tint; }
 	static function set_tint(_t:Int):Int {
 		_tint = _t;
-		updatefilters();
+		dirty = true; updatefilters();
 		
 	  return _tint;
 	}
@@ -135,7 +139,7 @@ class Filter {
 	static function get_vignette():Float { return _vignette; }
 	static function set_vignette(_v:Float):Float {
 		_vignette = _v;
-		updatefilters();
+		dirty = true; updatefilters();
 		
 	  return _vignette;
 	}
@@ -144,7 +148,7 @@ class Filter {
 	static function get_pixelsize():Float { return _pixelsize; }
 	static function set_pixelsize(_p:Float):Float {
 		_pixelsize = _p;
-		updatefilters();
+		dirty = true; updatefilters();
 		
 	  return _pixelsize;
 	}
@@ -153,7 +157,7 @@ class Filter {
 	static function get_redshift():Float { return _redshift; }
 	static function set_redshift(_r:Float):Float {
 		_redshift = _r;
-		updatefilters();
+		dirty = true; updatefilters();
 		
 	  return _redshift;
 	}
@@ -162,7 +166,7 @@ class Filter {
 	static function get_greenshift():Float { return _greenshift; }
 	static function set_greenshift(_g:Float):Float {
 		_greenshift = _g;
-		updatefilters();
+		dirty = true; updatefilters();
 		
 	  return _greenshift;
 	}
@@ -171,7 +175,7 @@ class Filter {
 	static function get_blueshift():Float { return _blueshift; }
 	static function set_blueshift(_b:Float):Float {
 		_blueshift = _b;
-		updatefilters();
+		dirty = true; updatefilters();
 		
 	  return _blueshift;
 	}
@@ -180,7 +184,7 @@ class Filter {
 	static function get_hue():Float { return _hueshift * 360; }
 	static function set_hue(_b:Float):Float {
 		_hueshift = _b / 360;
-		updatefilters();
+		dirty = true; updatefilters();
 		
 	  return _hueshift;
 	}
@@ -189,7 +193,7 @@ class Filter {
 	static function get_saturation():Float { return _saturationshift; }
 	static function set_saturation(_b:Float):Float {
 		_saturationshift = _b;
-		updatefilters();
+		dirty = true; updatefilters();
 		
 	  return _saturationshift;
 	}
@@ -198,7 +202,7 @@ class Filter {
 	static function get_lightness():Float { return _lightnessshift; }
 	static function set_lightness(_b:Float):Float {
 		_lightnessshift = _b;
-		updatefilters();
+		dirty = true; updatefilters();
 		
 	  return _lightnessshift;
 	}
@@ -207,7 +211,7 @@ class Filter {
 	static function get_contrast():Float { return _contrastshift; }
 	static function set_contrast(_b:Float):Float {
 		_contrastshift = _b;
-		updatefilters();
+		dirty = true; updatefilters();
 		
 	  return _contrastshift;
 	}
@@ -216,7 +220,7 @@ class Filter {
 	static function get_vcr():Bool{ return _vcr; }
 	static function set_vcr(s:Bool):Bool{
 		_vcr = s;
-		updatefilters();
+		dirty = true; updatefilters();
 		
 		return _vcr;
 	}
@@ -225,7 +229,7 @@ class Filter {
 	static function get_invert():Bool{ return _invert; }
 	static function set_invert(inv:Bool):Bool{
 		_invert = inv;
-		updatefilters();
+		dirty = true; updatefilters();
 		
 		return _invert;
 	}
@@ -234,7 +238,7 @@ class Filter {
 	static function get_blur():Float { return _blur; }
 	static function set_blur(_b:Float):Float {
 		_blur = _b;
-		updatefilters();
+		dirty = true; updatefilters();
 		
 	  return _blur;
 	}
@@ -243,7 +247,7 @@ class Filter {
 	static function get_bloom():Float { return _bloom; }
 	static function set_bloom(_b:Float):Float {
 		_bloom = _b;
-		updatefilters();
+		dirty = true; updatefilters();
 		
 	  return _bloom;
 	}
@@ -251,6 +255,13 @@ class Filter {
 	private static function updatefilters() {
 		if (!enabled) enable();
 		if (!available) return;
+		
+		if (_vcr){
+			vcrfilter.setfc0(Math.random(), Math.random(), 0.4, 1);
+			vcrfilter.setfc2(flash.Lib.getTimer(), 24.0, 4.0, 1.25);
+		}
+		
+		if (!dirty) return;
 		
 	  //When a filter changes, call this function internally to update the currently active filter
 		if (Gfx.screen != null){
@@ -298,8 +309,6 @@ class Filter {
 			}
 			
 			if (_vcr){
-				vcrfilter.setfc0(Math.random(), Math.random(), 0.4, 1);
-				vcrfilter.setfc2(flash.Lib.getTimer(), 24.0, 4.0, 1.25);
 				filterchain.push(vcrfilter);
 			}
 			
@@ -314,6 +323,8 @@ class Filter {
 			}else{
 				Gfx.screen.filter = new FilterChain(filterchain);
 			}
+			
+			dirty = false;
 		}
 	}
 	
