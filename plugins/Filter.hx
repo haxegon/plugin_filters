@@ -6,6 +6,8 @@ import starling.rendering.*;
 import starling.filters.*;
 import starling.utils.Color;
 
+import starling.core.Starling;
+
 import haxegon.*;
 
 @:access(haxegon.Core)
@@ -16,11 +18,31 @@ class Filter {
 			enabled = true;
 			Core.registerplugin("filters", "0.1.0");
       Core.checkrequirement("filters", "haxegon", "0.12.0");
-			createfilters();
 			
-			reset();
+			if (Starling.current.stage3D.context3D.driverInfo.indexOf("Software") == -1) {
+				available = true;
+			}
 			
-			Core.extend_endframe(updatefilters);
+			if(available){
+				createfilters();
+				
+				reset();
+				
+				Core.extend_endframe(updatefilters);
+			}else{
+				trace("Warning: Filters are not available on this machine, so they have been disabed.");
+			}
+		}
+	}
+	
+	public static function require(){
+		if (!enabled) enable();
+		
+		if (!available){
+			throw(
+			  "Error: This program requires GPU features that don't appear to be available on this machine. " +
+				"Try updating your graphics drivers, or contacting the developer for help."
+			);
 		}
 	}
 	
@@ -228,7 +250,9 @@ class Filter {
 	
 	private static function updatefilters() {
 		if (!enabled) enable();
-	  //When a filter changes, call this function internally to update the currently active filter	
+		if (!available) return;
+		
+	  //When a filter changes, call this function internally to update the currently active filter
 		if (Gfx.screen != null){
 			Gfx.screen.filter = null;
 			
@@ -294,6 +318,7 @@ class Filter {
 	}
 	
 	private static var enabled:Bool = false;
+	private static var available:Bool = false;
 	
 	private static inline var vignetteprogram:String =
 		"sub ft0.xy, v0.xy, fc0.xy \n" +
