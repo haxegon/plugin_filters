@@ -38,12 +38,19 @@ class Filter {
 		
 		pixelsizefilter = new CustomFilter(pixelsizeprogram);
 		pixelsizefilter.setfc0(1 / Gfx.screenwidth, 1 / Gfx.screenheight, 1, 1);
+		
+		vcrfilter = new CustomFilter(vcrprogram);
+		vcrfilter.setfc0(1, 1, 0.4, 1);    // Random variables for snow
+		vcrfilter.setfc1(-.001, 0, 0, 0);  // Red offset
+		vcrfilter.setfc2(1, 3, 1, 1);      // For tracking effect
+		vcrfilter.setfc3(12.9898, 4.1414, 43758.5453, 1); // Random variables
 	}
 	
 	private static var colortransformfilter:Simplefilter;
 	private static var bloomfilter:CustomFilter;
 	private static var chromaticaberrationfilter:CustomFilter;
 	private static var pixelsizefilter:CustomFilter;
+	private static var vcrfilter:CustomFilter;
 	private static var _hueshift:Float;
 	private static var _saturationshift:Float;
 	private static var _lightnessshift:Float;
@@ -56,6 +63,7 @@ class Filter {
 	private static var _greenshift:Float;
 	private static var _blueshift:Float;
 	private static var _pixelsize:Float;
+	private static var _vcr:Bool;
 	
 	/* Turn all filter effects off */
 	public static function reset() {
@@ -72,6 +80,7 @@ class Filter {
 		_blueshift = 0;
 		_pixelsize = 1;
 		_tint = Col.TRANSPARENT;
+		_vcr = false;
 		
 		if (Gfx.screen != null){
 			if(Gfx.screen.filter != null){
@@ -162,6 +171,15 @@ class Filter {
 	  return _contrastshift;
 	}
 	
+	public static var vcr(get, set):Bool;
+	static function get_vcr():Bool{ return _vcr; }
+	static function set_vcr(s:Bool):Bool{
+		_vcr = s;
+		updatefilters();
+		
+		return _vcr;
+	}
+	
 	public static var invert(get, set):Bool;
 	static function get_invert():Bool{ return _invert; }
 	static function set_invert(inv:Bool):Bool{
@@ -197,19 +215,6 @@ class Filter {
 			
 			var filterchain:Array<FragmentFilter> = [];
 			
-			//Bloom and blur use the same filter object
-			if (_bloom > 0) {
-				bloomfilter.setfc0(0, Gfx.screenwidth, Gfx.screenheight, 1 / (Geom.clamp((_bloom + 0.5) * 2, 0, 2.5) + _blur));
-				bloomfilter.setfc2((_bloom / 2) + 0.5, (_bloom / 2) + 0.5, (_bloom / 2) + 0.5, 1.0);
-				
-				filterchain.push(bloomfilter);
-			}else if (_blur > 0) {
-				bloomfilter.setfc0(0, Gfx.screenwidth, Gfx.screenheight, 1 / _blur);
-				bloomfilter.setfc2(0.5, 0.5, 0.5, _blur);
-				
-				filterchain.push(bloomfilter);
-			}
-			
 			//Colour transforms
 			colortransformfilter.reset();
 			if (_hueshift != 0)	colortransformfilter.adjustHue(_hueshift);
@@ -234,6 +239,25 @@ class Filter {
 			if (_pixelsize > 1){
 				pixelsizefilter.setfc0(_pixelsize / Gfx.screenwidth, _pixelsize / Gfx.screenheight, 1, 1);
 				filterchain.push(pixelsizefilter);
+			}
+			
+			//Bloom and blur use the same filter object
+			if (_bloom > 0) {
+				bloomfilter.setfc0(0, Gfx.screenwidth, Gfx.screenheight, 1 / (Geom.clamp((_bloom + 0.5) * 2, 0, 2.5) + _blur));
+				bloomfilter.setfc2((_bloom / 2) + 0.5, (_bloom / 2) + 0.5, (_bloom / 2) + 0.5, 1.0);
+				
+				filterchain.push(bloomfilter);
+			}else if (_blur > 0) {
+				bloomfilter.setfc0(0, Gfx.screenwidth, Gfx.screenheight, 1 / _blur);
+				bloomfilter.setfc2(0.5, 0.5, 0.5, _blur);
+				
+				filterchain.push(bloomfilter);
+			}
+			
+			if (_vcr){
+				vcrfilter.setfc0(Math.random(), Math.random(), 0.4, 1);
+				vcrfilter.setfc2(flash.Lib.getTimer(), 24.0, 4.0, 1.25);
+				filterchain.push(vcrfilter);
 			}
 			
 			if (filterchain.length == 0){
@@ -365,6 +389,46 @@ class Filter {
 		
 		// multiply by color
 		"mul oc, ft1, fc2";
+		
+	private static var vcrprogram:String =
+		// original texture
+		"tex ft0, v0, fs0<2d, clamp, linear, mipnone> \n"+
+
+		// jack up red offset
+		"add ft1.xy, v0.xy, fc1.xy \n"+
+		"tex ft3, ft1.xy, fs0<2d, clamp, linear, mipnone> \n"+
+		"mov ft0.x, ft3.x \n"+
+
+		// Random snow
+		"mov ft1.xy, v0.xy \n"+
+		"add ft1.xy, ft1.xy, fc0.xy \n"+
+		"mov ft1.zw, fc1.zz \n"+
+		"mov ft6.xy, fc3.xy \n"+
+		"mov ft6.zw, fc1.zz \n"+
+		"dp3 ft1.x, ft1, ft6 \n"+
+		"sin ft1.x, ft1.x \n"+
+		"mul ft1.x, ft1.x, fc3.z \n"+
+		"frc ft1.x, ft1.x \n"+
+		"mov ft2.xyz, ft1.xxx \n"+
+		"mov ft2.w, ft0.w \n"+
+		// multiply snow by snow amount
+		"mul ft2.xyz, ft2.xyz, fc0.zzz \n"+
+		/*
+		// tracking (black bar(s))
+		"mov ft1.x, v0.y \n"+
+		"mov ft1.y, fc2.x \n"+
+		"mul ft1.y, ft1.y, fc2.z \n"+
+		"mul ft1.x, ft1.x, fc2.y \n"+
+		"add ft1.x, ft1.x, ft1.y \n"+
+		"sin ft1.x, ft1.x \n"+
+		"add ft1.x, ft1.x, fc2.w \n"+
+		"sat ft1.x, ft1.x \n"+
+
+		// multiply black bar in
+		"mul ft0.xyz, ft0.xyz, ft1.xxx \n"+
+		*/
+		// add snow and original
+		"add oc, ft0, ft2 \n";
 }
 
 class Simplefilter extends FragmentFilter
@@ -691,6 +755,25 @@ class CustomFilter extends FragmentFilter{
 		actualeffect.usefc3 = true;
 	}
 	
+	public function setfc4(a:Float, b:Float, c:Float, d:Float){
+		actualeffect.fc4[0] = a; actualeffect.fc4[1] = b; actualeffect.fc4[2] = c; actualeffect.fc4[3] = d;
+		actualeffect.usefc4 = true;
+	}
+	
+	public function setfc5(a:Float, b:Float, c:Float, d:Float){
+		actualeffect.fc5[0] = a; actualeffect.fc5[1] = b; actualeffect.fc5[2] = c; actualeffect.fc5[3] = d;
+		actualeffect.usefc5 = true;
+	}
+	
+	public function setfc6(a:Float, b:Float, c:Float, d:Float){
+		actualeffect.fc6[0] = a; actualeffect.fc6[1] = b; actualeffect.fc6[2] = c; actualeffect.fc6[3] = d;
+		actualeffect.usefc6 = true;
+	}
+	
+	public function setfc7(a:Float, b:Float, c:Float, d:Float){
+		actualeffect.fc7[0] = a; actualeffect.fc7[1] = b; actualeffect.fc7[2] = c; actualeffect.fc7[3] = d;
+		actualeffect.usefc7 = true;
+	}
 	private var fragmentshader:String;
 	private var actualeffect:CustomEffect;
 }
@@ -700,6 +783,10 @@ class CustomEffect extends FilterEffect {
 	private var fc1:Vector<Float>; private var usefc1:Bool;
 	private var fc2:Vector<Float>; private var usefc2:Bool;
 	private var fc3:Vector<Float>; private var usefc3:Bool;
+	private var fc4:Vector<Float>; private var usefc4:Bool;
+	private var fc5:Vector<Float>; private var usefc5:Bool;
+	private var fc6:Vector<Float>; private var usefc6:Bool;
+	private var fc7:Vector<Float>; private var usefc7:Bool;
 	public var fragmentshader:String;
 	
   public function new(shader:String) {
@@ -709,6 +796,10 @@ class CustomEffect extends FilterEffect {
 		usefc1 = false; fc1 = Vector.ofArray(cast [0, 0, 0, 0]);
 		usefc2 = false; fc2 = Vector.ofArray(cast [0, 0, 0, 0]);
 		usefc3 = false; fc3 = Vector.ofArray(cast [0, 0, 0, 0]);
+		usefc4 = false; fc4 = Vector.ofArray(cast [0, 0, 0, 0]);
+		usefc5 = false; fc5 = Vector.ofArray(cast [0, 0, 0, 0]);
+		usefc6 = false; fc6 = Vector.ofArray(cast [0, 0, 0, 0]);
+		usefc7 = false; fc7 = Vector.ofArray(cast [0, 0, 0, 0]);
 		
 		fragmentshader = shader;
 	}
@@ -724,5 +815,9 @@ class CustomEffect extends FilterEffect {
 		if (usefc1) context.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 1, fc1);
 		if (usefc2) context.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 2, fc2);
 		if (usefc3) context.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 3, fc3);
+		if (usefc4) context.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 4, fc4);
+		if (usefc5) context.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 5, fc5);
+		if (usefc6) context.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 6, fc6);
+		if (usefc7) context.setProgramConstantsFromVector(Context3DProgramType.FRAGMENT, 7, fc7);
   }
 }
