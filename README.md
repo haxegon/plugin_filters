@@ -11,7 +11,7 @@ The current list of available filters are:
  - Lightness/Gamma adjustment
  - Colour tinting
  - Contrast adjustment
- - Chromatic Abberation
+ - Chromatic Aberation
  - Invert
  - Vignette
  - Pixelation/Mosaic
