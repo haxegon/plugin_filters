@@ -520,7 +520,7 @@ class Filter {
 		"add oc, ft0, ft2 \n";
 }
 
-class Simplefilter extends FragmentFilter
+private class Simplefilter extends FragmentFilter
 {
     // Most of the color transformation math was taken from the excellent ColorMatrix class by
     // Mario Klingemann: http://www.quasimondo.com/archives/000565.php -- THANKS!!!
@@ -687,7 +687,7 @@ class Simplefilter extends FragmentFilter
     }
 }
 
-class ColorMatrixEffect extends FilterEffect
+private class ColorMatrixEffect extends FilterEffect
 {
     private var _userMatrix:Vector<Float>;   // offset in range 0-255
     private var _shaderMatrix:Vector<Float>; // offset in range 0-1, changed order
@@ -811,7 +811,7 @@ class ColorMatrixEffect extends FilterEffect
 
 @:access(Filter)
 @:access(CustomEffect)
-class CustomFilter extends FragmentFilter{
+private class CustomFilter extends FragmentFilter{
 	public function new(_fragmentshader:String){
 		fragmentshader = _fragmentshader;
 		super();
@@ -867,7 +867,7 @@ class CustomFilter extends FragmentFilter{
 	private var actualeffect:CustomEffect;
 }
 
-class CustomEffect extends FilterEffect {
+private class CustomEffect extends FilterEffect {
 	private var fc0:Vector<Float>; private var usefc0:Bool;
 	private var fc1:Vector<Float>; private var usefc1:Bool;
 	private var fc2:Vector<Float>; private var usefc2:Bool;
