@@ -47,7 +47,7 @@ See <a href="https://github.com/haxegon/plugin_filters/tree/master/examples">the
 
 Not available yet. Check back later!
 
-## About Layers
+## About Filters
 
 *version*: 0.1.0
 
