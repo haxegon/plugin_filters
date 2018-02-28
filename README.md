@@ -45,7 +45,7 @@ See <a href="https://github.com/haxegon/plugin_filters/tree/master/examples">the
 
 ## Documentation
 
-Not available yet. Check back later!
+Not available yet. Check back later! For now, refer to <a href="https://github.com/haxegon/plugin_filters/tree/master/examples">the examples</a>. 
 
 ## About Filters
 
