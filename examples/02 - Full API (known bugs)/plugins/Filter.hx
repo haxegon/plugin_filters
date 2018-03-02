@@ -16,7 +16,7 @@ class Filter {
 	public static function enable(){
 		if (!enabled){
 			enabled = true;
-			Core.registerplugin("filters", "0.1.0");
+			Core.registerplugin("filters", "0.1.1");
       Core.checkrequirement("filters", "haxegon", "0.12.0");
 			
 			if (Starling.current.stage3D.context3D.driverInfo.indexOf("Software") == -1) {
@@ -81,22 +81,22 @@ class Filter {
 	private static var pixelsizefilter:CustomFilter;
 	private static var vcrfilter:CustomFilter;
 	private static var vignettefilter:CustomFilter;
-	private static var _hueshift:Float;
-	private static var _saturationshift:Float;
-	private static var _lightnessshift:Float;
-	private static var _contrastshift:Float;
-	private static var _invert:Bool;
-	private static var _blur:Float;
-	private static var _bloom:Float;
-	private static var _tint:Int;
-	private static var _redshift:Float;
-	private static var _greenshift:Float;
-	private static var _blueshift:Float;
-	private static var _pixelsize:Float;
-	private static var _vcr:Bool;
-	private static var _vignette:Float;
+	private static var _hueshift:Float = 0;
+	private static var _saturationshift:Float = 0;
+	private static var _lightnessshift:Float = 0;
+	private static var _contrastshift:Float = 0;
+	private static var _invert:Bool = false;
+	private static var _blur:Float = 0;
+	private static var _bloom:Float = 0;
+	private static var _tint:Int = 0x000001;
+	private static var _redshift:Float = 0;
+	private static var _greenshift:Float = 0;
+	private static var _blueshift:Float = 0;
+	private static var _pixelsize:Float = 0;
+	private static var _vcr:Bool = false;
+	private static var _vignette:Float = 0;
 	
-	private static var dirty:Bool;
+	private static var dirty:Bool = true;
 	
 	/* Turn all filter effects off */
 	public static function reset() {
