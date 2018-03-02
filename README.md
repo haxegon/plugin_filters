@@ -1,4 +1,4 @@
-# Filters (version 0.1.0 (2018-02-26))
+# Filters (version 0.1.1 (2018-03-02))
 ### A plugin for Haxegon: http://www.haxegon.com
 
 **Filters** lets you use fullscreen post-processing shaders in Haxegon!
@@ -47,9 +47,17 @@ See <a href="https://github.com/haxegon/plugin_filters/tree/master/examples">the
 
 Not available yet. Check back later! For now, refer to <a href="https://github.com/haxegon/plugin_filters/tree/master/examples">the examples</a>. 
 
+## Changelog
+
+0.1.1
+  - Fixed a crash bug with Neko. Updated for Haxegon 0.12.1.
+  
+0.1.0
+  - Initial release.
+
 ## About Filters
 
-*version*: 0.1.0
+*version*: 0.1.1
 
 *dependancies*: Haxegon 0.12.0 or newer.
 
